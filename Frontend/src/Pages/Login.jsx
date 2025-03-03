@@ -35,7 +35,7 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-gray-800 flex flex-col items-center justify-center p-4">
       <div className="text-[#CF992D] text-2xl font-semibold mb-6 flex items-center">
-        PangeaPay
+        Anxiety
       </div>
       
       <div className="bg-white rounded-3xl p-8 w-full max-w-md">

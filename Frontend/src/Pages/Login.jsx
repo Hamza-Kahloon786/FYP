@@ -23,7 +23,7 @@ const Login = () => {
 
       if (response.ok) {
         localStorage.setItem('token', data.token);
-        navigate('/kyc');
+        navigate('/');
       } else {
         setError(data.message);
       }

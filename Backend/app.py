@@ -5,6 +5,7 @@ import os
 from werkzeug.utils import secure_filename
 from config import MONGO_URI
 from flask_pymongo import PyMongo
+import jwt as pyjwt  # Rename to avoid conflicts
 
 # Mine
 from auth import auth_bp, init_mongo

@@ -1,117 +1,13 @@
-// import {
-//   BrowserRouter as Router,
-//   Routes,
-//   Route,
-//   useLocation,
-//   Navigate,
-// } from "react-router-dom";
-// import { useEffect, useState } from "react";
-// import Home from "./Pages/Home";
-// import KYC from "./Pages/KYCv";
-// import KycRegister from "./Pages/kycRegister";
-// import Navbar from "./Components/Navbar";
-// import Footer from "./Components/Footer";
-// import RegisterPage from "./Pages/RegisterPage";
-// import Login from "./Pages/Login";
-// import Forget from "./Pages/Forget";
-
-// function ScrollToTop() {
-//   const { pathname } = useLocation();
-
-//   useEffect(() => {
-//     window.scrollTo(0, 0);
-//   }, [pathname]);
-
-//   return null;
-// }
-
-// // Protected Route Component
-// const ProtectedRoute = ({ children }) => {
-//   const token = localStorage.getItem('token');
-//   return token ? children : <Navigate to="/Login" replace />;
-// };
-
-// // Layout component wrapping Navbar, Routes, and Footer
-// function Layout() {
-//   return (
-//     <>
-//       <Navbar />
-//       <Routes>
-//         {/* Protected Routes */}
-//         <Route path="/" element={
-//           <ProtectedRoute>
-//             <Home />
-//           </ProtectedRoute>
-//         } />
-//         <Route path="/kyc" element={
-//           <ProtectedRoute>
-//             <KYC />
-//           </ProtectedRoute>
-//         } />
-//         <Route path="/kycRegister" element={
-//           <ProtectedRoute>
-//             <KycRegister />
-//           </ProtectedRoute>
-//         } />
-
-//         {/* Public Routes */}
-//         <Route path="/RegisterPage" element={<RegisterPage />} />
-//         <Route path="/Login" element={<Login />} />
-//         <Route path="/Forget" element={<Forget />} />
-//       </Routes>
-//       <Footer />
-//     </>
-//   );
-// }
-
-// function App() {
-//   // Check authentication status when app loads
-//   useEffect(() => {
-//     const token = localStorage.getItem('token');
-//     if (token) {
-//       // Optional: Verify token validity with backend
-//       fetch('http://localhost:5000/api/auth/verify', {
-//         headers: {
-//           'Authorization': `Bearer ${token}`
-//         }
-//       }).catch(err => {
-//         console.error('Token verification failed:', err);
-//         localStorage.removeItem('token');
-//       });
-//     }
-//   }, []);
-
-//   return (
-//     <Router>
-//       <ScrollToTop />
-//       <Layout />
-//     </Router>
-//   );
-// }
-
-// export default App;
-
-
-
-
-
-
-
-
-
-
-
 import {
   BrowserRouter as Router,
   Routes,
   Route,
   useLocation,
   Navigate,
+  Outlet
 } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Home from "./Pages/Home";
-import KYC from "./Pages/KYCv";
-import KycRegister from "./Pages/kycRegister";
 import Navbar from "./Components/Navbar";
 import Footer from "./Components/Footer";
 import RegisterPage from "./Pages/RegisterPage";
@@ -128,46 +24,100 @@ function ScrollToTop() {
   return null;
 }
 
+// Protected route component
+function ProtectedRoute() {
+  const token = localStorage.getItem('token');
+  
+  if (!token) {
+    // Redirect to login if no token
+    return <Navigate to="/login" replace />;
+  }
+  
+  return <Outlet />; // Renders child routes when authenticated
+}
+
 // Layout component wrapping Navbar, Routes, and Footer
 function Layout() {
   return (
     <>
       <Navbar />
-      <Routes>
-        {/* All Routes accessible regardless of auth status */}
-        <Route path="/" element={<Home />} />
-        <Route path="/kyc" element={<KYC />} />
-        <Route path="/kycRegister" element={<KycRegister />} />
-        <Route path="/RegisterPage" element={<RegisterPage />} />
-        <Route path="/Login" element={<Login />} />
-        <Route path="/Forget" element={<Forget />} />
-        {/* Add any additional routes here */}
-      </Routes>
+      <Outlet /> {/* This will render the matched route */}
       <Footer />
     </>
   );
 }
 
+// Auth layout for pages without navbar/footer
+function AuthLayout() {
+  return <Outlet />;
+}
+
 function App() {
-  // Keep token verification for login/logout functionality
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
+
+  // Verify token on mount
   useEffect(() => {
     const token = localStorage.getItem('token');
+    
     if (token) {
+      setIsVerifying(true);
       fetch('http://localhost:5000/api/auth/verify', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
-      }).catch(err => {
+      })
+      .then(response => {
+        if (response.ok) {
+          setIsAuthenticated(true);
+        } else {
+          // Invalid token
+          localStorage.removeItem('token');
+          setIsAuthenticated(false);
+        }
+      })
+      .catch(err => {
         console.error('Token verification failed:', err);
         localStorage.removeItem('token');
+        setIsAuthenticated(false);
+      })
+      .finally(() => {
+        setIsVerifying(false);
       });
+    } else {
+      setIsAuthenticated(false);
+      setIsVerifying(false);
     }
   }, []);
+
+  // Show loading while verifying token
+  if (isVerifying) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <Router>
       <ScrollToTop />
-      <Layout />
+      <Routes>
+        {/* Auth routes without navbar/footer */}
+        <Route element={<AuthLayout />}>
+          <Route path="/login" element={!isAuthenticated ? <Login setIsAuthenticated={setIsAuthenticated} /> : <Navigate to="/" replace />} />
+          <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/" replace />} />
+          <Route path="/forget" element={<Forget />} />
+        </Route>
+
+        {/* Main app with layout (navbar/footer) */}
+        <Route element={<Layout />}>
+          {/* Protected routes */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/" element={<Home />} />
+
+          </Route>
+        </Route>
+
+        {/* Redirect any other routes to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
+      </Routes>
     </Router>
   );
 }

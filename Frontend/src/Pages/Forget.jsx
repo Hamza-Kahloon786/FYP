@@ -1,13 +1,20 @@
-// Forget.js
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 
 const Forget = () => {
   const [email, setEmail] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Reset states
+    setError('');
+    setMessage('');
+    setIsSubmitting(true);
+    
     try {
       const response = await fetch('http://localhost:5000/api/auth/forgot-password', {
         method: 'POST',
@@ -20,14 +27,16 @@ const Forget = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setMessage(data.message);
-        setError('');
+        setMessage('Password reset link has been sent to your email address.');
+        setEmail(''); // Clear the email field
       } else {
-        setError(data.message);
-        setMessage('');
+        setError(data.message || 'Failed to send reset link. Please try again.');
       }
     } catch (err) {
-      setError('An error occurred. Please try again.');
+      setError('An error occurred. Please try again later.');
+      console.error('Forgot password error:', err);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -44,22 +53,43 @@ const Forget = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {message && <div className="text-green-500 text-sm text-center">{message}</div>}
-          {error && <div className="text-red-500 text-sm text-center">{error}</div>}
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="E-mail Address"
-            className="w-full p-3 bg-gray-100 rounded-lg outline-none"
-            required
-          />
+          {message && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative" role="alert">
+              <span className="block sm:inline">{message}</span>
+            </div>
+          )}
+          
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+              <span className="block sm:inline">{error}</span>
+            </div>
+          )}
+          
+          <div className="mb-4">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="E-mail Address"
+              className="w-full p-3 bg-gray-100 rounded-lg outline-none"
+              required
+              disabled={isSubmitting}
+            />
+          </div>
+          
           <button
             type="submit"
-            className="w-full bg-[#CF992D] text-white py-3 rounded-lg font-medium hover:bg-black transition-colors"
+            className="w-full bg-[#CF992D] text-white py-3 rounded-lg font-medium hover:bg-black transition-colors disabled:opacity-70 disabled:cursor-not-allowed"
+            disabled={isSubmitting}
           >
-            Send Reset Link
+            {isSubmitting ? 'Sending...' : 'Send Reset Link'}
           </button>
+          
+          <div className="text-center mt-4">
+            <Link to="/Login" className="text-[#CF992D] hover:underline">
+              Back to Login
+            </Link>
+          </div>
         </form>
       </div>
     </div>
